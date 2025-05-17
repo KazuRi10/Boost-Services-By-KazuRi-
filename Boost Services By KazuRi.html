@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boost Service</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+    .container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+    h2 { text-align: center; }
+    input, select, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+    button { background: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    #logoutBtn { background: #dc3545; margin-top: 15px; }
+    #waveBox { background: #d4edda; border: 1px solid #28a745; padding: 10px; margin-top: 15px; text-align: center; cursor: pointer; user-select: all; }
+    #proofPreview { max-width: 100%; margin-top: 10px; border-radius: 5px; display: none; }
+    #message { text-align: center; font-weight: bold; margin-top: 10px; }
+    #message.error { color: red; }
+    #message.success { color: green; }
+    #authMessage { text-align: center; font-weight: bold; margin-top: 10px; color: red; }
+  </style>
+</head>
+<body>
+ <div class="container" id="authSection">
+  <h2>Login / Sign Up</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Sign Up</button>
+  <p id="authMessage"></p>
+ </div>
+
+ <div class="container" id="orderSection" style="display:none;">
+  <h2>Place TikTok Order</h2>
+
+  <label for="serviceSelect">Choose Service:</label>
+  <select id="serviceSelect" onchange="calculateCost()">
+    <option value="view">TikTok Views - 10 MMK / 1000</option>
+    <option value="like">TikTok Likes - 1500 MMK / 1000</option>
+    <option value="follower">TikTok Followers - 13500 MMK / 1000</option>
+  </select>
+
+  <input type="text" id="tiktokLink" placeholder="TikTok video/profile link" />
+  <input type="number" id="amount" placeholder="Amount (e.g. 1000)" oninput="calculateCost()" min="1" />
+
+  <p id="costDisplay">Cost: 0 MMK</p>
+
+  <label for="paymentProof">Upload Payment Proof (Image):</label>
+  <input type="file" id="paymentProof" accept="image/*" onchange="previewImage(event)" />
+  <img id="proofPreview" alt="Payment Proof Preview" />
+
+  <div id="waveBox" onclick="copyWaveNumber()">
+    Wave Number: 09781487575 (TTK) - Click to Copy
+  </div>
+
+  <button onclick="submitOrder()">Submit Order</button>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+
+  <p id="message"></p>
+ </div>
+
+ <script>
+  const prices = {
+    view: 10 / 1000,
+    like: 1500 / 1000,
+    follower: 13500 / 1000,
+  };
+
+  const botToken = "7780697102:AAHaquEZyiSsmMhZ7NghDw2gPEkR1QPtHAU";
+  const chatId = "5418817639";
+
+  function signup() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    if (!email || !password) {
+      showMessage("authMessage", "Please enter email and password.");
+      return;
+    }
+    if (localStorage.getItem(email)) {
+      showMessage("authMessage", "User already exists.");
+      return;
+    }
+    localStorage.setItem(email, password);
+    login();
+  }
+
+  function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    if (localStorage.getItem(email) === password) {
+      localStorage.setItem("loggedInUser", email);
+      showOrderSection();
+    } else {
+      showMessage("authMessage", "Invalid email or password.");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("loggedInUser");
+    document.getElementById("authSection").style.display = "block";
+    document.getElementById("orderSection").style.display = "none";
+  }
+
+  function showOrderSection() {
+    document.getElementById("authSection").style.display = "none";
+    document.getElementById("orderSection").style.display = "block";
+    document.getElementById("authMessage").textContent = "";
+    document.getElementById("message").textContent = "";
+    calculateCost();
+  }
+
+  function calculateCost() {
+    const service = document.getElementById("serviceSelect").value;
+    const amount = parseInt(document.getElementById("amount").value);
+    if (!amount || amount <= 0) {
+      document.getElementById("costDisplay").textContent = "Cost: 0 MMK";
+      return;
+    }
+    const cost = Math.round(amount * prices[service]);
+    document.getElementById("costDisplay").textContent = `Cost: ${cost} MMK`;
+  }
+
+  function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById("proofPreview").src = e.target.result;
+      document.getElementById("proofPreview").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function copyWaveNumber() {
+    navigator.clipboard.writeText("09781487575 (TTK)");
+    alert("Copied: 09781487575 (TTK)");
+  }
+
+  async function submitOrder() {
+    const email = localStorage.getItem("loggedInUser");
+    const service = document.getElementById("serviceSelect").value;
+    const link = document.getElementById("tiktokLink").value.trim();
+    const amount = parseInt(document.getElementById("amount").value);
+    const file = document.getElementById("paymentProof").files[0];
+
+    if (!link || !amount || !file) {
+      showMessage("message", "Fill in all fields and upload image.", true);
+      return;
+    }
+
+    const serviceNames = {
+      view: "TikTok Views",
+      like: "TikTok Likes",
+      follower: "TikTok Followers",
+    };
+
+    const caption = `<b>New Order</b>
+<b>User:</b> ${email}
+<b>Service:</b> ${serviceNames[service]}
+<b>Link:</b> ${link}
+<b>Amount:</b> ${amount}`;
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("photo", file);
+    formData.append("caption", caption);
+    formData.append("parse_mode", "HTML");
+
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showMessage("message", "Order submitted successfully!", false);
+        resetForm();
+      } else {
+        showMessage("message", "Telegram error: " + data.description, true);
+      }
+    } catch (e) {
+      showMessage("message", "Error: " + e.message, true);
+    }
+  }
+
+  function resetForm() {
+    document.getElementById("tiktokLink").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("paymentProof").value = "";
+    document.getElementById("proofPreview").style.display = "none";
+    calculateCost();
+  }
+
+  function showMessage(id, text, error = true) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = error ? "error" : "success";
+  }
+
+  window.onload = function () {
+    if (localStorage.getItem("loggedInUser")) {
+      showOrderSection();
+    }
+  };
+ </script>
+</body>
+</html>
